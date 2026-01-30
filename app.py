@@ -1,5 +1,6 @@
 import streamlit as st
 import os
+import streamlit.components.v1 as components
 from typing import Annotated, List, TypedDict
 from langgraph.graph import StateGraph, START, END
 from langgraph.graph.message import add_messages
@@ -12,7 +13,7 @@ st.set_page_config(
     page_title="Mahabharat GPT",
     page_icon="🕉️",
     layout="wide",
-    initial_sidebar_state="expanded"
+    initial_sidebar_state="auto" # Auto-collapse on mobile
 )
 
 # --- 2. THEME & DESIGN SYSTEM (CSS) ---
@@ -52,7 +53,8 @@ st.markdown("""
     section[data-testid="stSidebar"] div,
     section[data-testid="stSidebar"] h1, 
     section[data-testid="stSidebar"] h2, 
-    section[data-testid="stSidebar"] h3 {
+    section[data-testid="stSidebar"] h3,
+    section[data-testid="stSidebar"] .stMarkdown {
         color: var(--parchment-light) !important;
     }
 
@@ -63,8 +65,7 @@ st.markdown("""
         color: var(--gold-antique) !important;
         border: 1px solid var(--gold-antique);
         font-family: 'Cinzel', serif;
-        /* Crucial for Mobile: Allows text to wrap if it's too long */
-        white-space: normal !important; 
+        white-space: normal !important; /* Text wrapping for mobile */
         height: auto !important;
         padding: 0.5rem 1rem !important;
         margin-bottom: 5px;
@@ -118,8 +119,6 @@ st.markdown("""
         .stChatMessage {
             font-size: 0.9rem; /* Readable text on small screens */
         }
-        /* Adjust sidebar width behavior for mobile is handled by Streamlit, 
-           but we ensure padding is safe */
         .block-container {
             padding-top: 1rem !important;
             padding-left: 1rem !important;
@@ -130,6 +129,8 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # --- 3. LOGIC SETUP ---
+
+# Secure API Key Handling
 if "GOOGLE_API_KEY" in st.secrets:
     os.environ["GOOGLE_API_KEY"] = st.secrets["GOOGLE_API_KEY"]
 else:
@@ -155,50 +156,89 @@ def get_engine():
 
 retriever, llm = get_engine()
 
-# --- 4. SIDEBAR NAVIGATION (CLEANER & MOBILE READY) ---
+# --- HELPER: AUTO-CLOSE SIDEBAR (Mobile Fix) ---
+def close_sidebar():
+    """Injects JS via iframe to reliably close the sidebar on mobile."""
+    js_code = """
+    <script>
+        // Target the sidebar element
+        var sidebar = window.parent.document.querySelector('section[data-testid="stSidebar"]');
+        if (sidebar) {
+            // The 'X' button is typically the first button in the header
+            var closeBtn = sidebar.querySelector('button');
+            if (closeBtn) {
+                closeBtn.click();
+            }
+        }
+    </script>
+    """
+    components.html(js_code, height=0, width=0)
+
+# --- 4. SIDEBAR NAVIGATION ---
 with st.sidebar:
     st.markdown("## 📜 Chronicles")
     st.markdown("Select a path:")
     
     st.markdown("---")
     
-    # Using Expanders to organize the list nicely
+    # Using Expanders for clean grouping
     with st.expander("⚜️ The Pandavas", expanded=True):
         if st.button("Yudhishthira (Dharma)"):
             st.session_state.prompt_input = "Tell me about Yudhishthira's adherence to Truth and the game of dice."
+            close_sidebar()
+            
         if st.button("Bhima (Strength)"):
             st.session_state.prompt_input = "Describe Bhima's immense strength and his vows."
+            close_sidebar()
+            
         if st.button("Arjuna (Warrior)"):
             st.session_state.prompt_input = "Describe Arjuna's skills, the Gandiva bow, and his bond with Krishna."
+            close_sidebar()
+            
         if st.button("Nakula & Sahadeva"):
             st.session_state.prompt_input = "What were the special skills and roles of Nakula and Sahadeva?"
+            close_sidebar()
+            
         if st.button("Draupadi (Panchali)"):
             st.session_state.prompt_input = "Tell me about Draupadi's birth from fire and her resilience."
+            close_sidebar()
 
     with st.expander("🐍 The Kauravas"):
         if st.button("Duryodhana (King)"):
             st.session_state.prompt_input = "Explain Duryodhana's motivations, his jealousy, and his friendship with Karna."
+            close_sidebar()
+            
         if st.button("Karna (Tragic Hero)"):
             st.session_state.prompt_input = "Tell me about Karna's tragic life, his charity (Daan), and his armor (Kavach)."
+            close_sidebar()
+            
         if st.button("Shakuni (Planner)"):
             st.session_state.prompt_input = "What was Shakuni's role in the game of dice and influencing Duryodhana?"
+            close_sidebar()
+            
         if st.button("Dushasana"):
             st.session_state.prompt_input = "What was Dushasana's role in the court and his fate in the war?"
+            close_sidebar()
 
     with st.expander("👴 Elders & Divine"):
         if st.button("Krishna (Divine)"):
             st.session_state.prompt_input = "Describe the role of Krishna as the charioteer and his divinity."
+            close_sidebar()
+            
         if st.button("Bhishma (Grandsire)"):
             st.session_state.prompt_input = "What was Bhishma's vow of celibacy and his role as the commander?"
+            close_sidebar()
+            
         if st.button("Guru Drona"):
             st.session_state.prompt_input = "Tell me about Dronacharya as the teacher of both clans and his death."
+            close_sidebar()
 
     st.markdown("---")
-    st.info("💡 **Tip:** Type in English or Hinglish!")
+    st.info("💡 **Tip:** You can ask in English or Hinglish!")
 
 # --- 5. MAIN INTERFACE ---
 
-# Custom Header HTML
+# Custom Header
 st.markdown("""
     <div class="main-header">
         <h1>🕉️ Mahabharat GPT</h1>
@@ -217,14 +257,14 @@ if "messages" not in st.session_state:
         AIMessage(content="Pranam, seeker of truth. I am the chronicler of the Great War. Ask, and I shall recite from the ancient texts.")
     )
 
-# Handle Sidebar Clicks
+# Handle Sidebar Trigger
 if "prompt_input" in st.session_state and st.session_state.prompt_input:
     user_input = st.session_state.prompt_input
     del st.session_state.prompt_input
 else:
     user_input = None
 
-# Display History
+# Display Chat History
 for msg in st.session_state.messages:
     if isinstance(msg, HumanMessage):
         with st.chat_message("user", avatar="🙏"):
@@ -238,13 +278,13 @@ chat_input_val = st.chat_input("Ask about Dharma, Karma, or the War...")
 final_query = user_input if user_input else chat_input_val
 
 if final_query:
-    # Show User Msg
-    if not user_input: 
+    # 1. Show User Message
+    if not user_input: # If manual type, show it. If button click, we already showed it implicitly via logic below? Actually safe to just show.
         with st.chat_message("user", avatar="🙏"):
             st.write(final_query)
     st.session_state.messages.append(HumanMessage(content=final_query))
 
-    # Generate Response
+    # 2. Generate Response
     with st.chat_message("assistant", avatar="🪔"):
         with st.spinner("Meditating on the scriptures..."):
             
@@ -252,7 +292,7 @@ if final_query:
             docs = retriever.invoke(final_query)
             context_text = "\n\n".join([d.page_content for d in docs])
             
-            # Prompt
+            # Prompt (Sanjaya Persona + Script/Language Rules)
             system_prompt = (
                 "You are Sanjaya, the wise narrator of the Mahabharata. "
                 "CONTEXT:\n" + context_text + "\n\n"
@@ -260,7 +300,7 @@ if final_query:
                 "1. LANGUAGE: Match the user's language (English, Hindi, or Hinglish)."
                 "2. SCRIPT: If user types in Latin script (e.g. 'Karna kaun tha'), use Latin script (Hinglish). Do NOT use Devanagari unless user does."
                 "3. TONE: Respectful, epic, like a Rishi."
-                "4. CONTENT: Answer strictly based on context."
+                "4. CONTENT: Answer strictly based on context provided."
             )
             
             messages = [SystemMessage(content=system_prompt)] + st.session_state.messages
