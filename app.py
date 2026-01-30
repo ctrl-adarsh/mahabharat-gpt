@@ -147,7 +147,7 @@ def get_engine():
     retriever = vectorstore.as_retriever(search_kwargs={"k": 4})
     
     llm = ChatGoogleGenerativeAI(
-        model="gemini-1.5-pro",
+        model="gemini-2.5-flash",
         temperature=0.4,
         convert_system_message_to_human=True
     )
