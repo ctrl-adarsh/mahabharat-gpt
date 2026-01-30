@@ -1,4 +1,4 @@
 .env
 chatbot.py
 ingest.py
-mahabharata.pdf
+mahabharata.pdfmahabharat_db/chroma.sqlite3
