@@ -144,7 +144,7 @@ def get_engine():
     if not os.path.exists(DB_PATH):
         return None, None
     embeddings = GoogleGenerativeAIEmbeddings(
-    model="models/text-embedding-001",
+    model="gemini-embedding-001",
     google_api_key=st.secrets["GOOGLE_API_KEY"]  # 🔥 important
     )
     vectorstore = Chroma(persist_directory=DB_PATH, embedding_function=embeddings)
